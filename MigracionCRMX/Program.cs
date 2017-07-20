@@ -32,7 +32,7 @@ namespace MigracionCRMX
             //enviarContactos();
             //asignarContactoPrimario();
             //enviarNotas(CRM);
-            enviarActividades(CRM, "32D42758-E52F-E011-862B-001E0BFCBA2B");
+            //enviarActividades(CRM, "32D42758-E52F-E011-862B-001E0BFCBA2B");
             //enviarlistasdemkt(CRM);
 
 
@@ -809,8 +809,8 @@ namespace MigracionCRMX
         private static OrganizationService ConexionCRM()
         {
             //String TENANT = "atx";
-            String USERNAME = "equintero@atx.mx";
-            String PASSWORD = "/MONSTERzz3";
+            String USERNAME = "crmadmin@atx.mx";
+            String PASSWORD = "Bora2091";
             string connectionString = "ServiceUri=https://atx.api.crm.dynamics.com/XRMServices/2011/Organization.svc; UserName=" + USERNAME + "; Password=" + PASSWORD;
             CrmConnection connection = CrmConnection.Parse(connectionString);
             OrganizationService servicio = new OrganizationService(connection);
