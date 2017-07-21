@@ -34,6 +34,8 @@ namespace MigracionCRMX
             //enviarNotas(CRM);
             //enviarActividades(CRM, "32D42758-E52F-E011-862B-001E0BFCBA2B");
             //enviarlistasdemkt(CRM);
+            enviarOportunidades(CRM);
+
 
 
             #endregion
@@ -103,6 +105,70 @@ namespace MigracionCRMX
 
         }
         */
+        private static void enviarOportunidades(OrganizationService CRM)
+        {
+            String Query = "select oportunidad.*,propietario.InternalEMailAddress, propietario.FullName as propietario from Opportunity oportunidad inner join SystemUser as propietario on oportunidad.ownerid = propietario.SystemUserId";
+            int Total = 0;
+            DataTable datos = EjecutaQuery(Query);
+            int Actual = 0;
+            int Errores = 0;
+            Total = datos.Rows.Count;
+            foreach (DataRow item in datos.Rows)
+            {
+                Actual++;
+                Console.WriteLine("Registro "+Actual+" de "+Total+":" + item["Name"].ToString());
+                Opportunity Oportunidad = new Opportunity();
+                int estado = Convert.ToInt32(item["StateCode"].ToString());
+                /* switch (estado)
+                 {
+                     case 0:
+                         Oportunidad.StateCode = OpportunityState.Open; Oportunidad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
+                         break;
+                     case 1:
+                         Oportunidad.StateCode = OpportunityState.Won; Oportunidad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
+                         break;
+                     case 2:
+                         Oportunidad.StateCode = OpportunityState.Lost; int statsnmbr = Convert.ToInt32(item["StatusCode"].ToString()); switch (statsnmbr) { case 200000: Oportunidad.StatusCode = Oportunidad.StatusCode = new OptionSetValue(100000005); break; case 200001: Oportunidad.StatusCode = Oportunidad.StatusCode = new OptionSetValue(100000006); break; case 200002: Oportunidad.StatusCode = Oportunidad.StatusCode = new OptionSetValue(100000007); break; case 200003: Oportunidad.StatusCode = Oportunidad.StatusCode = new OptionSetValue(100000008); break; default: Oportunidad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString())); break; } 
+                         break;
+                 }*/
+                 
+                bool existepropietario = VerificaPropietario(item["InternalEMailAddress"].ToString());
+                if (existepropietario) { Oportunidad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString()); } else { Oportunidad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", "mlsosa@atx.mx"); }
+                Oportunidad.KeyAttributes = new KeyAttributeCollection { { "new_claveonpremise", item["OpportunityId"].ToString() } };
+                Oportunidad.Name = item["Name"].ToString();
+                Oportunidad.ParentAccountId = (item["ParentAccountId"].ToString() != "") ? (new EntityReference(Account.EntityLogicalName, "accountnumber", item["ParentAccountId"].ToString())) : null;
+                Oportunidad.new_subtipodelicencias = (item["new_subtipodelicencias"].ToString() != "") ? (new OptionSetValue(int.Parse(item["new_subtipodelicencias"].ToString()))):null;
+                Oportunidad.new_Equipo = (item["new_Equipo"].ToString() != "") ? new OptionSetValue(int.Parse(item["new_Equipo"].ToString())) :null;
+                Oportunidad.new_descripser = item["new_descripser"].ToString();
+                Oportunidad.new_status= (item["new_status"].ToString() != "") ? new OptionSetValue(int.Parse(item["new_status"].ToString())):null;
+
+                if (item["EstimatedCloseDate"].ToString() != "") { Oportunidad.EstimatedCloseDate = DateTime.Parse(item["EstimatedCloseDate"].ToString()).AddHours(-5) ; }
+                if (item["CloseProbability"].ToString()!="") { Oportunidad.CloseProbability = int.Parse(item["CloseProbability"].ToString()); }
+                Oportunidad.OpportunityRatingCode = (item["OpportunityRatingCode"].ToString() != "") ? new OptionSetValue(int.Parse(item["OpportunityRatingCode"].ToString())) : null;
+                Oportunidad.TransactionCurrencyId = (item["TransactionCurrencyIdName"].ToString() != "") ? (new EntityReference(TransactionCurrency.EntityLogicalName, "currencyname", item["TransactionCurrencyIdName"].ToString())) : null;
+                try
+                {
+                    UpsertRequest request = new UpsertRequest()
+                    {
+                        Target = Oportunidad
+                    };
+                    CRM.Execute(request);
+                    Console.WriteLine("Oportunidad" + item["Name"].ToString() + " actualizado con exito ");
+                }
+                catch (Exception e)
+                {
+                    Errores++;
+                    SendErrorToText(e, "Error: " + Errores + " . " + item["Name"].ToString()+" id "+ item["OpportunityId"].ToString(), item[""].ToString(), "Oportunidades");
+                    continue;
+
+                }
+            }
+
+        }
+
+
+
+
         private static void enviarActividades(OrganizationService CRM, string objectidentificador)
         {
             int Total = 0, Actual = 0, Errores = 0;
@@ -226,11 +292,11 @@ namespace MigracionCRMX
                 if (existepropietario) { Cuenta.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString()); } else { Cuenta.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", "mlsosa@atx.mx"); }
                 DateTime fechadecreacion = DateTime.Parse(item["createdon"].ToString());
                 Cuenta.OverriddenCreatedOn = fechadecreacion.AddHours(-5);
-                Cuenta.AccountNumber = item["AccountId"].ToString();
                 if (item["Description"].ToString() != "") { Cuenta.Description = item["Description"].ToString(); } else { Cuenta.Description = ""; }
                 Cuenta.Name = item["Name"].ToString();
                 Cuenta.YomiName = item["YomiName"].ToString();
                 Cuenta.new_RFC = item["New_RFC"].ToString();
+                Cuenta.WebSiteURL = item["WebSiteURL"].ToString();
                 Cuenta.ParentAccountId = (item["ParentAccountId"].ToString() != "") ? (new EntityReference(Account.EntityLogicalName, "accountnumber", item["ParentAccountId"].ToString())) : null;
                 Cuenta.New_RelacionesdeNegocioId = (item["new_relacionesdenegocioidname"] != null) ? (new EntityReference(New_relacionesdenegocio.EntityLogicalName, "new_name", item["new_relacionesdenegocioidname"].ToString())) : null;
                 Cuenta.WebSiteURL = item["WebSiteURL"].ToString();
@@ -305,7 +371,7 @@ namespace MigracionCRMX
         private static void asignarContactoPrimario()
         {
             OrganizationService CRM = ConexionCRM();
-            String Query = "select cuenta.*,propietario.InternalEMailAddress, propietario.FullName from Account cuenta inner join SystemUser as propietario on cuenta.ownerid = propietario.SystemUserId where cuenta.PrimaryContactId is not null";
+            String Query = "select cuenta.*,propietario.InternalEMailAddress, propietario.FullName from Account cuenta inner join SystemUser as propietario on cuenta.ownerid = propietario.SystemUserId where cuenta.PrimaryContactId is not null order by createdon desc";
             int Total = 0;
             DataTable datos = EjecutaQuery(Query);
             int Actual = 0;
@@ -342,7 +408,7 @@ namespace MigracionCRMX
         private static void enviarContactos()
         {
             OrganizationService CRM = ConexionCRM();
-            String Query = "select contacto.*,propietario.InternalEMailAddress from Contact contacto inner join SystemUser propietario on contacto.ownerid = propietario.SystemUserId";
+            String Query = "select contacto.*,propietario.InternalEMailAddress from Contact contacto inner join SystemUser propietario on contacto.ownerid = propietario.SystemUserId order by createdon desc";
             int Total = 0;
             DataTable datos = EjecutaQuery(Query);
             int Actual = 0;
@@ -396,6 +462,13 @@ namespace MigracionCRMX
                 if (item["new_NoenvarinformacindeOffice"].ToString() != "") { contacto.new_NoenvarinformacindeOffice = bool.Parse(item["new_NoenvarinformacindeOffice"].ToString()); } else { contacto.new_NoenvarinformacindeOffice = null; }
                 if (item["New_NoenvarmaterialesdeMarketingdeAzulAcuatic"].ToString() != "") { contacto.new_NoEnvarmaterialesdeMarketingdeAzulAcuatic = bool.Parse(item["New_NoenvarmaterialesdeMarketingdeAzulAcuatic"].ToString()); } else { contacto.new_NoEnvarmaterialesdeMarketingdeAzulAcuatic = null; }
                 if (item["new_NoenvarinformacindeConjuntoSantaAnita"].ToString() != "") { contacto.new_NoenvarinformacindeConjuntoSantaAnita = bool.Parse(item["new_NoenvarinformacindeConjuntoSantaAnita"].ToString()); } else { contacto.new_NoenvarinformacindeConjuntoSantaAnita = null; }
+                contacto.cdi_linkedin= item["cdi_linkedin"].ToString();
+                contacto.cdi_twitter = item["cdi_twitter"].ToString();
+                contacto.cdi_facebook= item["cdi_facebook"].ToString();
+                contacto.cdi_image = item["cdi_image"].ToString();
+                if (item["cdi_identifiedon"].ToString()!="") { contacto.cdi_identifiedon = DateTime.Parse(item[""].ToString()).AddHours(-5); }
+                if (item["cdi_allowtextmessages"].ToString() != "") { contacto.cdi_allowtextmessages = bool.Parse(item["cdi_allowtextmessages"].ToString()); }
+                if (item["cdi_age"].ToString() != "") { contacto.cdi_age = int.Parse(item["cdi_age"].ToString()); }
 
 
                 try
@@ -805,7 +878,6 @@ namespace MigracionCRMX
             }
 
         }
-
         private static OrganizationService ConexionCRM()
         {
             //String TENANT = "atx";
@@ -875,6 +947,64 @@ namespace MigracionCRMX
             // Close the stream:
             log.Flush();
             log.Close();
+        }
+        private static void DeleteRecords(OrganizationService CRM)
+        {
+            Console.WriteLine("Eliminando Informacion ...");
+
+            BulkDeleteRequest request = new BulkDeleteRequest
+            {
+                JobName = "Depuracion de registros...",
+                ToRecipients = new Guid[] { },
+                CCRecipients = new Guid[] { },
+                RecurrencePattern = string.Empty,
+                QuerySet = new QueryExpression[]
+                {
+                    new QueryExpression
+                    {
+                        EntityName = Account.EntityLogicalName,
+                        Criteria =
+                        {
+                            Filters =
+                            {
+                                new FilterExpression
+                                {
+                                    FilterOperator = LogicalOperator.Or,
+                                    Conditions =
+                                    {
+                                        new ConditionExpression("createdon", ConditionOperator.LastMonth),
+                                        new ConditionExpression("createdon", ConditionOperator.ThisMonth)
+                                    },
+                                },
+                            },
+
+                    }
+                }
+            }
+            };
+
+            BulkDeleteResponse response = (BulkDeleteResponse)CRM.Execute(request);
+            Guid jobId = response.JobId;
+
+            bool deleting = true;
+
+            while (deleting)
+            {
+                Console.WriteLine("Borrando...");
+                Thread.Sleep(10000);    // poll crm every 10 seconds 
+
+                QueryExpression query = new QueryExpression { EntityName = "bulkdeleteoperation" };
+                query.Criteria.AddCondition("asyncoperationid", ConditionOperator.Equal, jobId);
+                query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 3);
+                query.Criteria.AddCondition("statuscode", ConditionOperator.Equal, 30);
+
+                EntityCollection results = CRM.RetrieveMultiple(query);
+                if (results.Entities.Count > 0)
+                {
+                    Console.WriteLine("Informacion Eliminada!!!");
+                    deleting = false;
+                }
+            }
         }
         #endregion
     }
