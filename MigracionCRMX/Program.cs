@@ -32,9 +32,9 @@ namespace MigracionCRMX
             //enviarContactos();
             //asignarContactoPrimario();
             //enviarNotas(CRM);
-            //enviarActividades(CRM, "32D42758-E52F-E011-862B-001E0BFCBA2B");
+            enviarActividades(CRM, "1",4210);
             //enviarlistasdemkt(CRM);
-            enviarOportunidades(CRM);
+            //enviarOportunidades(CRM);
 
 
 
@@ -165,64 +165,102 @@ namespace MigracionCRMX
             }
 
         }
-
-
-
-
-        private static void enviarActividades(OrganizationService CRM, string objectidentificador)
+        private static void enviarActividades(OrganizationService CRM, string objectidentificador, int tipoactividad)
         {
-            int Total = 0, Actual = 0, Errores = 0;
-            String Query = "select  * from FilteredActivityPointer as actividad inner join SystemUser as propietario on actividad.ownerid = propietario.SystemUserId where actividad.regardingobjecttypecode=1 and actividad.regardingobjectid = '" + objectidentificador+"' order by actividad.modifiedOn desc";
-            DataTable datos = EjecutaQuery(Query);
-            Total = datos.Rows.Count;
-            foreach (DataRow item in datos.Rows)
+
+            switch (tipoactividad)
             {
-                Actual++;
-                Console.WriteLine("Registro: " + Actual + " de " + Total + " Actividad: " + item["activitytypecodename"].ToString() + " a " + item["RegardingObjectIdName"].ToString() + item["OwnerIdName"].ToString() + item["Subject"].ToString());
-                PhoneCall actividad = new PhoneCall();
-                PhoneCall llamada = new PhoneCall();
-                bool existepropietario = VerificaPropietario(item["InternalEMailAddress"].ToString());
-                if (existepropietario) { actividad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString()); } else { actividad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", "mlsosa@atx.mx"); }
-                actividad.KeyAttributes = new KeyAttributeCollection { { "new_clavedeintegracion", item["ActivityId"].ToString() } };
-                actividad.Subject = item["Subject"].ToString();
-                actividad.ActualDurationMinutes = Convert.ToInt32(item["ActualDurationMinutes"].ToString());
-                actividad.ActualEnd = DateTime.Parse(item["ActualEnd"].ToString());
-                //actividad.ActualStart = DateTime.Parse(item["ActualStart"].ToString());
-                actividad.TransactionCurrencyId= (item["TransactionCurrencyIdName"].ToString() != "") ? (new EntityReference(TransactionCurrency.EntityLogicalName, "currencyname", item["TransactionCurrencyIdName"].ToString())) : null;
-                actividad.Description = item["Description"].ToString();
-                DateTime fecha_creacion = DateTime.Parse(item["CreatedOn"].ToString());
-                actividad.OverriddenCreatedOn =fecha_creacion.AddHours(-5);
-                int estado = Convert.ToInt32(item["StateCode"].ToString());
-                switch (estado)
-                {
-                    case 0:
-                        actividad.StateCode = PhoneCallState.Open; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
-                        break;
-                    case 1:
-                        actividad.StateCode = PhoneCallState.Completed; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
-                        break;
-                    case 2:
-                        actividad.StateCode = PhoneCallState.Canceled; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
-                        break;
-                }
-                try
-                {
-                    UpsertRequest request = new UpsertRequest()
+                case 4210:
+                    int Total = 0, Actual = 0, Errores = 0;
+                    String Query = "select  * from PhoneCall as actividad inner join SystemUser as propietario on actividad.ownerid = propietario.SystemUserId where actividad.regardingobjecttypecode=" + objectidentificador;
+                    DataTable datos = EjecutaQuery(Query);
+                    Total = datos.Rows.Count;
+                    foreach (DataRow item in datos.Rows)
                     {
-                        Target = actividad
-                    };
-                    CRM.Execute(request);
-                    Console.WriteLine("Actividad " + item["activitytypecodename"].ToString() + " actualizado con exito ");
-                }
-                catch (Exception e)
-                {
-                    Errores++;
-                    SendErrorToText(e, "Error: " + Errores + " . " + item["activitytypecodename"].ToString(), item["activityid"].ToString(), "Llamadas");
-                    continue;
+                        Actual++;
+                        Console.WriteLine("Registro: " + Actual + " de " + Total + " Actividad: " + item["activitytypecode"].ToString() + " a " + item["RegardingObjectIdName"].ToString() + item["OwnerIdName"].ToString() + item["Subject"].ToString());
+                        PhoneCall actividad = new PhoneCall();
+                        bool existepropietario = VerificaPropietario(item["InternalEMailAddress"].ToString());
+                        if (existepropietario) { actividad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString()); } else { actividad.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", "mlsosa@atx.mx"); }
+                        actividad.KeyAttributes = new KeyAttributeCollection { { "new_clavedeintegracion", item["ActivityId"].ToString() } };
+                        actividad.Subject = item["Subject"].ToString();
+                        if(item["ActualDurationMinutes"].ToString()!="")actividad.ActualDurationMinutes = Convert.ToInt32(item["ActualDurationMinutes"].ToString());
+                        if (item["ActualEnd"].ToString() != "") actividad.ActualEnd = DateTime.Parse(item["ActualEnd"].ToString());
+                        if (item["ActualStart"].ToString() != "") actividad.ActualStart = DateTime.Parse(item["ActualStart"].ToString());
+                        actividad.TransactionCurrencyId = (item["TransactionCurrencyIdName"].ToString() != "") ? (new EntityReference(TransactionCurrency.EntityLogicalName, "currencyname", item["TransactionCurrencyIdName"].ToString())) : null;
+                        actividad.Description = item["Description"].ToString();
+                        DateTime fecha_creacion = DateTime.Parse(item["CreatedOn"].ToString());
+                        actividad.OverriddenCreatedOn = fecha_creacion.AddHours(-5);
+                        actividad.DirectionCode = bool.Parse(item["DirectionCode"].ToString());
+                        actividad.IsBilled = bool.Parse(item["DirectionCode"].ToString());
+                        actividad.IsWorkflowCreated = bool.Parse(item["IsWorkflowCreated"].ToString());
+                        if (item["ScheduledStart"].ToString()!="") { actividad.ScheduledStart = DateTime.Parse(item["ScheduledStart"].ToString()); }
+                        if (item["ScheduledEnd"].ToString() != "") { actividad.ScheduledEnd = DateTime.Parse(item["ScheduledEnd"].ToString()); }
+                        actividad.PhoneNumber = item["PhoneNumber"].ToString();
+                        actividad.RegardingObjectId = new EntityReference(Account.EntityLogicalName, "accountnumber", item["RegardingObjectId"].ToString());
+                        int estado = Convert.ToInt32(item["StateCode"].ToString());
 
-                }
+                        ActivityParty CallFrom = new ActivityParty
+                        {
+                            PartyId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString())
+                        };
+                        ActivityParty CallTo = new ActivityParty
+                        {
+                            PartyId = new EntityReference(Account.EntityLogicalName, "accountnumber", item["RegardingObjectId"].ToString())
+                        };
 
+                        actividad.From = new ActivityParty[] { CallFrom };
+                        actividad.To = new ActivityParty[] { CallTo };
+                        if (item["new_Niveldeinteres"].ToString() != "") actividad.new_Niveldeinteres = new OptionSetValue(int.Parse(item["new_Niveldeinteres"].ToString()));
+                        actividad.new_TelefonoAlternativo = item["new_TelefonoAlternativo"].ToString();
+                        actividad.new_TelefonoParticular = item["new_TelefonoAlternativo"].ToString();
+                        actividad.new_OtroTelefono= item["new_TelefonoAlternativo"].ToString();
+                        actividad.new_TelefonoMovil= item["new_TelefonoAlternativo"].ToString();
+                        actividad.new_Extension= item["new_TelefonoAlternativo"].ToString();
+                        if (item["new_cdigoderespuesta"].ToString() != "") actividad.new_cdigoderespuesta = new OptionSetValue(int.Parse(item["new_cdigoderespuesta"].ToString()));
+                        if (item["new_Fechadellamada"].ToString()!="") actividad.new_Fechadellamada = DateTime.Parse(item["new_Fechadellamada"].ToString());
+                        /*switch (estado)
+                        {
+                            case 0:
+                                actividad.StateCode = PhoneCallState.Open; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
+                                break;
+                            case 1:
+                                actividad.StateCode = PhoneCallState.Completed; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
+                                break;
+                            case 2:
+                                actividad.StateCode = PhoneCallState.Canceled; actividad.StatusCode = new OptionSetValue(Convert.ToInt32(item["StatusCode"].ToString()));
+                                break;
+                        }*/
+                        try
+                        {
+                           UpsertRequest request = new UpsertRequest()
+                            {
+                                Target = actividad
+                            };
+                            CRM.Execute(request);
+                            Console.WriteLine("Actividad " + item["activitytypecode"].ToString() + " actualizado con exito ");
+                        }
+                        catch (Exception e)
+                        {
+                            Errores++;
+                            SendErrorToText(e, "Error: " + Errores + " . " + item["activitytypecode"].ToString(), item["activityid"].ToString(), "Llamadas");
+                            continue;
+
+                        }
+
+                    }
+                    break;
+                case 4212:
+                    string task = "";
+                    break;
+                case 4202:
+                    string email = "";
+                    break;
+                case 4201:
+                    string appointment = "";
+                    break;
             }
+            
         }
         private static void enviarNotas(OrganizationService CRM)
         {
@@ -490,7 +528,7 @@ namespace MigracionCRMX
 
             }
         }
-        private static void geteRelacionNegocio(OrganizationService CRM)
+        private static void getRelacionNegocio(OrganizationService CRM)
         {
             String Query = "SELECT * FROM new_relacionesdenegocio";
             int Total = 0;
