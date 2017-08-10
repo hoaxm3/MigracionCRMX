@@ -34,6 +34,7 @@ namespace MigracionCRMX
             //enviarNotas(CRM);
             //enviarActividades(CRM, "32D42758-E52F-E011-862B-001E0BFCBA2B");
             //enviarlistasdemkt(CRM);
+            enviarContratos
             
 
             #endregion
@@ -52,9 +53,8 @@ namespace MigracionCRMX
             //getDepartamentosContacto(CRM);
             #endregion
         }
-
         #region Funciones 
-      /*  private static void enviarlistasdemkt( OrganizationService CRM)
+        private static void enviarlistasdemkt( OrganizationService CRM)
         {
             int Total = 0, Actual = 0, Errores = 0;
             String Query = "select  * from list";
@@ -101,8 +101,7 @@ namespace MigracionCRMX
 
             }
 
-        }
-        */
+        }       
         private static void enviarActividades(OrganizationService CRM, string objectidentificador)
         {
             int Total = 0, Actual = 0, Errores = 0;
@@ -875,12 +874,12 @@ namespace MigracionCRMX
             log.Flush();
             log.Close();
         }
-
+        
         //Codigo de Daniel :D
         private static void enviarContratos()
         {
             OrganizationService CRM = ConexionCRM();
-            String Query = "select * from ";
+            String Query = "select * from filteredContract ";
             int Total = 0;
             DataTable datos = EjecutaQuery(Query);
             int Actual = 0;
@@ -889,90 +888,44 @@ namespace MigracionCRMX
             foreach (DataRow item in datos.Rows)
             {
                 Actual++;
-                Account Cuenta = new Account();
-                if (Convert.ToInt32(item["StateCode"].ToString()) == 1) { Cuenta.StateCode = AccountState.Inactive; Cuenta.StatusCode = new OptionSetValue(2); }
-                bool existepropietario = VerificaPropietario(item["InternalEMailAddress"].ToString());
-                if (item["LastUsedInCampaign"].ToString() != "") { Cuenta.LastUsedInCampaign = DateTime.Parse(item["LastUsedInCampaign"].ToString()); }
-                Console.WriteLine("Informacion del cliente " + item["Name"].ToString() + " Registo:" + Actual + " de " + Total);
-                Cuenta.KeyAttributes = new KeyAttributeCollection { { "accountnumber", item["AccountId"].ToString() } };
-                Cuenta.TransactionCurrencyId = (item["TransactionCurrencyIdName"].ToString() != "") ? (new EntityReference(TransactionCurrency.EntityLogicalName, "currencyname", item["TransactionCurrencyIdName"].ToString())) : null;
-                if (existepropietario) { Cuenta.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item["InternalEMailAddress"].ToString()); } else { Cuenta.OwnerId = new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", "mlsosa@atx.mx"); }
-                DateTime fechadecreacion = DateTime.Parse(item["createdon"].ToString());
-                Cuenta.OverriddenCreatedOn = fechadecreacion.AddHours(-5);
-                Cuenta.AccountNumber = item["AccountId"].ToString();
-                if (item["Description"].ToString() != "") { Cuenta.Description = item["Description"].ToString(); } else { Cuenta.Description = ""; }
-                Cuenta.Name = item["Name"].ToString();
-                Cuenta.YomiName = item["YomiName"].ToString();
-                Cuenta.new_RFC = item["New_RFC"].ToString();
-                Cuenta.ParentAccountId = (item["ParentAccountId"].ToString() != "") ? (new EntityReference(Account.EntityLogicalName, "accountnumber", item["ParentAccountId"].ToString())) : null;
-                Cuenta.New_RelacionesdeNegocioId = (item["new_relacionesdenegocioidname"] != null) ? (new EntityReference(New_relacionesdenegocio.EntityLogicalName, "new_name", item["new_relacionesdenegocioidname"].ToString())) : null;
-                Cuenta.WebSiteURL = item["WebSiteURL"].ToString();
-                Cuenta.Telephone1 = item["Telephone1"].ToString();
-                Cuenta.Telephone2 = item["Telephone2"].ToString();
-                Cuenta.Telephone3 = item["Telephone3"].ToString();
-                Cuenta.new_Telefono4 = item["New_Telefono4"].ToString();
-                Cuenta.Fax = item["Fax"].ToString();
-                Cuenta.EMailAddress1 = item["EMailAddress1"].ToString();
-                Cuenta.EMailAddress2 = item["EMailAddress2"].ToString();
-                Cuenta.Address1_Line1 = item["address1_line1"].ToString();
-                Cuenta.new_Colonia = item["New_Colonia"].ToString();
-                Cuenta.Address1_City = item["address1_city"].ToString();
-                Cuenta.Address1_PostalCode = item["address1_postalcode"].ToString();
-                Cuenta.New_EstadoId = (item["new_estadoidname"].ToString() != "") ? (new EntityReference(New_estado.EntityLogicalName, "new_descripcion", item["new_estadoidname"].ToString())) : null;
-                Cuenta.New_PasId = (item["new_pasidname"].ToString() != "") ? (new EntityReference(New_pais.EntityLogicalName, "new_descripcion", item["new_pasidname"].ToString())) : null;
-                Cuenta.CustomerSizeCode = (item["New_Tamaodeempresa"].ToString() != "") ? (new OptionSetValue(Convert.ToInt32(item["New_Tamaodeempresa"]))) : null;
-                if (item["New_Number"].ToString() != "") { Cuenta.new_Numerodeempleados = item["New_Number"].ToString(); }
-                Cuenta.new_NmerodecomputadorasERP = (item["New_Nmerodecompuatadoras"].ToString() != "") ? (new OptionSetValue(Convert.ToInt32(item["New_Nmerodecompuatadoras"]))) : null;
-                Cuenta.new_NmerodesucursaleslocalizacionesERP = (item["New_Numerodesucursaleslocalizaciones"].ToString() != "") ? (new OptionSetValue(Convert.ToInt32(item["New_Numerodesucursaleslocalizaciones"]))) : null;
-                if (item["New_SectorEconomico"].ToString() != "") { Cuenta.IndustryCode = new OptionSetValue(Convert.ToInt32(item["New_SectorEconomico"])); }
-                Cuenta.new_CdigoSICId = (item["new_cdigosicidname"].ToString() != "") ? (new EntityReference(New_cdigosic.EntityLogicalName, "new_codigosic", item["new_cdigosicidname"].ToString())) : null;
-                Cuenta.New_SubCdigoSICId = (item["new_subcdigosicidname"].ToString() != "") ? (new EntityReference(New_subsic.EntityLogicalName, "new_name", item["new_subcdigosicidname"].ToString())) : null;
-                Cuenta.New_SoftwareERPId = (item["New_SoftwareERPId"].ToString() != "") ? (new EntityReference(New_softwareerp.EntityLogicalName, "new_iddeswerp", item["New_SoftwareERPId"].ToString())) : null;
-                Cuenta.New_FabricantedeSoftwareERPId = (item["new_fabricantedesoftwareerpid"].ToString() != "") ? (new EntityReference(New_fabricantedesoftware.EntityLogicalName, "new_descripcion", item["new_fabricantedesoftwareerpidname"].ToString())) : null;
-                Cuenta.new_Distribuidorerpid = (item["new_distribuidorerpid"].ToString() != "") ? (new EntityReference(Competitor.EntityLogicalName, "name", item["new_distribuidorerpidname"].ToString())) : null;
-                if (item["New_Fechadeultimaactualizacin"].ToString() != "") { Cuenta.new_FechaultimadeactualizacindelERP = DateTime.Parse(item["New_Fechadeultimaactualizacin"].ToString()); }
-                if (item["New_FechaprevistadecambiodeERP"].ToString() != "") { Cuenta.new_FechaprevistadecambiodeERP = DateTime.Parse(item["New_FechaprevistadecambiodeERP"].ToString()); }
-                Cuenta.new_Tipodeinteresenlasolucin = (item["New_Tipodeinteresenlasolucion"].ToString() != "") ? (new OptionSetValue(Convert.ToInt32(item["New_Tipodeinteresenlasolucion"]))) : null;
-                Cuenta.new_AodeadquicisionERP = item["New_AnodeadquicisionERP"].ToString();
-                Cuenta.New_SoftwareCRMId = (item["New_SoftwareCRMId"].ToString() != "") ? (new EntityReference(New_softwarecrm.EntityLogicalName, "new_descripcion", item["new_softwarecrmidname"].ToString())) : null;
-                Cuenta.New_FabricantedeSoftwareCRMId = (item["New_FabricantedeSoftwareCRMId"].ToString() != "") ? (new EntityReference(New_fabricantedesoftware.EntityLogicalName, "new_descripcion", item["new_fabricantedesoftwarecrmidname"].ToString())) : null;
-                Cuenta.new_Distribuidorcrmid = (item["New_DistribuidorcrmId"].ToString() != "") ? (new EntityReference(Competitor.EntityLogicalName, "name", item["new_distribuidorcrmidname"].ToString())) : null;
-
-                if (item["New_NoestasatisfechoconlasolucionCRM"].ToString() != "") { Cuenta.new_NoestsatisfechoconlasolucinCRM = bool.Parse(item["New_NoestasatisfechoconlasolucionCRM"].ToString()); }else { Cuenta.new_NoestsatisfechoconlasolucinCRM = null; }
-                if (item["New_ProcesodecambioERP"].ToString() != "") { Cuenta.new_ProcesodecambioERP = bool.Parse(item["New_ProcesodecambioERP"].ToString()); } else { Cuenta.new_ProcesodecambioERP = null; }
-                if (item["New_NoestasatisfechoconlasolucionERP"].ToString() != "") { Cuenta.new_NoestsatisfechoconlasolucinERP = bool.Parse(item["New_NoestasatisfechoconlasolucionERP"].ToString()); } else { Cuenta.new_NoestsatisfechoconlasolucinERP = null; }
-                if (item["New_Departamentoinformatico"].ToString() != "") { Cuenta.new_DepartamentoInformtico = bool.Parse(item["New_Departamentoinformatico"].ToString()); }else { Cuenta.new_DepartamentoInformtico = null; }
-                if (item["New_Cuentaconservidores"].ToString() != "") { Cuenta.new_CuentaconservidoresERP = bool.Parse(item["New_Cuentaconservidores"].ToString()); }else { Cuenta.new_CuentaconservidoresERP = null; }
-                if (item["new_fechaultimadeactualizacincrm"].ToString() != "") { Cuenta.new_FechaultimadeactualizacindelCRM = DateTime.Parse(item["new_fechaultimadeactualizacincrm"].ToString()); }
-                Cuenta.new_AodeadquicisionCRM = item["new_anodeadquicisioncrm"].ToString();
-                Cuenta.new_NecesidadCRM = item["new_necesidadcrm"].ToString();
-                Cuenta.new_Necesidad = item["new_necesidad"].ToString();
-                if (item["new_ProcesodecambioCRM"].ToString() != "") { Cuenta.new_ProcesodecambioCRM = bool.Parse(item["new_ProcesodecambioCRM"].ToString()); } else { Cuenta.new_ProcesodecambioCRM = null; }
-                if (item["new_FechaprevistadecambiodeCRM"].ToString() != "") { Cuenta.new_FechaprevistadecambiodeCRM = DateTime.Parse(item["new_FechaprevistadecambiodeCRM"].ToString()); }
-                if (item["new_Existepresupuestoasignadoparaesteproyecto"].ToString() != "") { Cuenta.new_Existepresupuestoasignadoparaesteproyecto = new OptionSetValue(Convert.ToInt32(item["new_Existepresupuestoasignadoparaesteproyecto"])); }
-                if (item["new_existepresupuestoasignadoparaesteprocrm"].ToString() != "") { Cuenta.new_existepresupuestoasignadoparaesteprocrm = new OptionSetValue(Convert.ToInt32(item["new_existepresupuestoasignadoparaesteprocrm"])); }
-
-
+                Contract Contrato = new Contract();
+                Contrato.new_Minutostotales         = int.Parse(item["new_Minutostotalesdelcontratoint"].ToString());
+                Contrato.new_Minutosutilizados      = int.Parse(item["new_minutosutilizadosdelcontractoint"].ToString());
+                Contrato.new_Minutosrestantes       = int.Parse(item["new_minutosrestantesdelcontratoint"].ToString());
+                Contrato.Title                      = item["Title"].ToString();
+                Contrato.ContractNumber             = item["ContractNumber"].ToString();
+                Contrato.CustomerId                 = (item["CustomerId"].ToString() != "") ? (new EntityReference(Account.EntityLogicalName, "accountnumber", item[""].ToString())) : null;
+                Contrato.new_Contacto               = (item["new_Contacto"].ToString() != "") ? (new EntityReference(Contact.EntityLogicalName, "pager", item[""].ToString())) : null;
+                Contrato.new_2docontacto            = (item["new_Contactosecundario"].ToString() != "") ? (new EntityReference(Contact.EntityLogicalName, "pager", item[""].ToString())) : null;
+                //Contrato.new_Producto               = item["new_Produc"].ToString(); // Referencia faltante 
+                Contrato.new_Atiende                = (item["new_atiende"].ToString() != "") ? (new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item[""].ToString())) : null;
+                //Contrato.new_Area                 = item["new_areas"].ToString(); -- Referencia faltante
+                Contrato.OwnerId                    = (item["ownerid"].ToString() != "") ? (new EntityReference(SystemUser.EntityLogicalName, "internalemailaddress", item[""].ToString())) : null;
+                Contrato.ActiveOn                   = DateTime.Parse(item["ActiveOn"].ToString());
+                Contrato.ExpiresOn                  = DateTime.Parse(item["ExpiresOn"].ToString());
+                Contrato.TransactionCurrencyId      (item[""].ToString() != "TransactionCurrencyId") ? (new EntityReference(TransactionCurrency.EntityLogicalName, "currencyname", item[""].ToString())) : null;
+                //StateCode
+                //StatusCode
                 try
                 {
                     UpsertRequest request = new UpsertRequest()
                     {
-                        Target = Cuenta
+                        Target = Contracto
                     };
-                    CRM.Execute(request);
-                    Console.WriteLine("Cliente" + item["Name"].ToString() + " actualizado con exito ");
+                    CRM.Execute(request);                    
+                    Console.WriteLine("Contrato" + item["ContractNumber"].ToString() + " actualizado con exito ");
                 }
                 catch (Exception e)
                 {
                     Errores++;
-                    SendErrorToText(e, "Error: "+Errores+" . "+item["Name"].ToString(), item["FullName"].ToString(),"Cuentas");
+                    SendErrorToText(e, "Error: "+Errores+" . "+item["ContractNumber"].ToString(), item["title"].ToString(),"Cuentas");
                     continue;
 
                 }
 
             }
             Console.WriteLine();
-            Console.WriteLine("Proceso de Cuentas finalizado, total procesados: "+Total+ ", Correctos: " + (Total-Errores)+", Errores: " + Errores );
+            Console.WriteLine("Proceso de contratos finalizado, total procesados: "+Total+ ", Correctos: " + (Total-Errores)+", Errores: " + Errores );
             Console.ReadKey();
         }
         #endregion
